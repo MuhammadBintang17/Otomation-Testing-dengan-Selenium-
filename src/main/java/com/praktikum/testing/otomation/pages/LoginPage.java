@@ -27,7 +27,8 @@ public class LoginPage extends BasePage {
     @FindBy(className = "validation-summary-errors")
     private WebElement loginError;
 
-    @FindBy(css = "#Email-error")
+    // PERBAIKAN: Menggunakan selector atribut validasi yang lebih akurat
+    @FindBy(css = "span[data-valmsg-for='Email']")
     private WebElement emailError;
 
     @FindBy(linkText = "Log out")
@@ -75,7 +76,7 @@ public class LoginPage extends BasePage {
         }
     }
 
-    // Dapatkan pesan error login
+    // Dapatkan pesan error login (Summary Error di atas)
     public String getLoginError() {
         try {
             waitForVisible(loginError);
@@ -85,10 +86,22 @@ public class LoginPage extends BasePage {
         }
     }
 
-    // Dapatkan pesan error email
+    // Dapatkan pesan error email (PERBAIKAN LOGIKA)
     public String getEmailError() {
         try {
-            return getText(emailError);
+            // 1. Coba ambil error spesifik di bawah field email
+            if (isDisplayed(emailError)) {
+                String error = getText(emailError);
+                if (!error.isEmpty()) return error;
+            }
+
+            // 2. Jika tidak ada, coba ambil dari error summary umum
+            // Kadang jika format salah total, error muncul di summary
+            if (isDisplayed(loginError)) {
+                return getText(loginError);
+            }
+
+            return "";
         } catch (Exception e) {
             return "";
         }
@@ -100,7 +113,7 @@ public class LoginPage extends BasePage {
             click(logoutLink);
             wait.until(ExpectedConditions.visibilityOf(loginLink));
         } catch (Exception e) {
-            System.out.println("Logout error: " + e.getMessage());
+            System.out.println("Logout error (Mungkin sudah logout): " + e.getMessage());
         }
     }
 

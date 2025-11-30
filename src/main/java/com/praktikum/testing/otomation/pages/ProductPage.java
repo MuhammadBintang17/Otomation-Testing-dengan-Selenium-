@@ -23,16 +23,20 @@ public class ProductPage extends BasePage {
     @FindBy(className = "picture")
     private WebElement productImage;
 
-    // Perhatikan: ID ini mungkin berubah tergantung produknya (misal: add-to-cart-button-72)
-    // Sesuaikan dengan ID spesifik produk yang Anda test jika perlu.
-    @FindBy(id = "add-to-cart-button-72")
+    // PERBAIKAN: Menggunakan CSS Selector yang lebih umum (starts-with)
+    // Ini akan cocok dengan 'add-to-cart-button-72', 'add-to-cart-button-31', dll.
+    @FindBy(css = "input[id^='add-to-cart-button-']")
     private WebElement addToCartButton;
 
-    @FindBy(id = "product_enteredQuantity_72")
+    // PERBAIKAN: Sama seperti tombol add to cart, input quantity ID-nya dinamis
+    @FindBy(css = "input[id^='product_enteredQuantity_']")
     private WebElement quantityInput;
 
-    @FindBy(className = "content")
+    @FindBy(css = "#bar-notification .content")
     private WebElement notificationMessage;
+
+    @FindBy(css = "#bar-notification .close")
+    private WebElement closeNotification;
 
     @FindBy(linkText = "shopping cart")
     private WebElement cartLink;
@@ -67,6 +71,8 @@ public class ProductPage extends BasePage {
 
     // Tambah ke cart
     public void addToCart() {
+        // Scroll ke tombol add to cart jika perlu (opsional, kadang tertutup)
+        // ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addToCartButton);
         click(addToCartButton);
     }
 
@@ -79,7 +85,7 @@ public class ProductPage extends BasePage {
     public String getNotification() {
         try {
             waitForVisible(notificationMessage);
-            return getText(notificationMessage); // Typo 'gotToxt' diperbaiki
+            return getText(notificationMessage);
         } catch (Exception e) {
             return "";
         }
@@ -88,6 +94,8 @@ public class ProductPage extends BasePage {
     // Klik link shopping cart
     public void goToCart() {
         try {
+            // Tunggu notifikasi hilang dulu agar tidak menutupi tombol cart (opsional)
+            // Atau langsung klik link cart di header
             click(cartLink);
         } catch (Exception e) {
             System.out.println("Cart link not found: " + e.getMessage());
@@ -97,7 +105,21 @@ public class ProductPage extends BasePage {
     // Cek apakah produk berhasil ditambahkan ke cart
     public boolean isAddedToCart() {
         try {
-            String message = getNotification();
+            // Tunggu sampai bar notifikasi muncul
+            wait.until(ExpectedConditions.visibilityOf(notificationMessage));
+            String message = getText(notificationMessage);
+
+            // Tutup notifikasi agar tidak menghalangi elemen lain
+            try {
+                if (isDisplayed(closeNotification)) {
+                    click(closeNotification);
+                    // Tunggu sebentar sampai animasi tutup selesai
+                    Thread.sleep(500);
+                }
+            } catch (Exception ex) {
+                // Ignore jika gagal tutup
+            }
+
             return message.contains("added to your shopping cart") ||
                     message.contains("The product has been added to your");
         } catch (Exception e) {

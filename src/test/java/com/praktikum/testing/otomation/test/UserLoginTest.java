@@ -8,8 +8,13 @@ import org.testng.annotations.Test;
 
 /**
  * Test class untuk feature User Login (8 test cases)
+ * Mencakup skenario positif, negatif, validasi field, dan session.
  */
 public class UserLoginTest extends BaseTest {
+
+    // Ganti credentials ini dengan akun yang SUDAH TERDAFTAR
+    private final String VALID_EMAIL = "testuser@example.com";
+    private final String VALID_PASSWORD = "Test@123";
 
     @Test(priority = 1, description = "Test login berhasil dengan credentials valid")
     public void testSuccessfulLogin() {
@@ -23,18 +28,22 @@ public class UserLoginTest extends BaseTest {
         test.log(Status.INFO, "Buka halaman login");
 
         // Login dengan credentials valid
-        // Gunakan akun dummy yang valid atau yang baru diregister
-        loginPage.login("testuser@example.com", "Test@123");
-        test.log(Status.INFO, "Login dengan email dan password valid");
+        loginPage.login(VALID_EMAIL, VALID_PASSWORD);
+        test.log(Status.INFO, "Login dengan email: " + VALID_EMAIL);
 
         // Verifikasi login berhasil
-        Assert.assertTrue(loginPage.isLoginSuccess(), "Login harus berhasil");
-        Assert.assertTrue(homePage.isUserLoggedIn(), "User harus terlihat logged in");
-        test.log(Status.PASS, "Login berhasil - user bisa login");
+        // Jika gagal disini, berarti akun belum terdaftar atau password salah
+        if (!loginPage.isLoginSuccess()) {
+            test.log(Status.FAIL, "Login gagal. Pesan error: " + loginPage.getLoginError());
+        }
 
-        // Logout untuk cleanup
+        Assert.assertTrue(loginPage.isLoginSuccess(), "Login harus berhasil (Cek apakah akun sudah diregistrasi?)");
+        Assert.assertTrue(homePage.isUserLoggedIn(), "User harus terlihat logged in di homepage");
+        test.log(Status.PASS, "Login berhasil - user masuk ke sistem");
+
+        // Logout untuk cleanup agar siap untuk test berikutnya
         loginPage.logout();
-        test.log(Status.INFO, "Logout untuk bersih-bersih");
+        test.log(Status.INFO, "Logout berhasil");
     }
 
     @Test(priority = 2, description = "Test login gagal dengan credentials invalid")
@@ -42,23 +51,18 @@ public class UserLoginTest extends BaseTest {
         test.log(Status.INFO, "Memulai test login dengan credentials invalid");
 
         LoginPage loginPage = new LoginPage(driver);
-
         loginPage.goToLoginPage();
-        test.log(Status.INFO, "Buka halaman login");
 
-        // Login dengan credentials invalid
-        loginPage.login("invalid@example.com", "WrongPassword123");
-        test.log(Status.INFO, "Login dengan email dan password salah");
+        // Login dengan credentials asal
+        loginPage.login("invalid_email_123@test.com", "WrongPass!");
+        test.log(Status.INFO, "Input credentials invalid");
 
         // Verifikasi error message muncul
         String errorMessage = loginPage.getLoginError();
-        Assert.assertFalse(errorMessage.isEmpty(), "Pesan error harus ditampilkan");
+        Assert.assertFalse(errorMessage.isEmpty(), "Pesan error harus muncul");
+        Assert.assertTrue(errorMessage.contains("Login was unsuccessful"), "Pesan error tidak sesuai");
 
-        // Pesan error bisa "Login was unsuccessful" atau spesifik lainnya
-        Assert.assertTrue(errorMessage.contains("Login was unsuccessful"),
-                "Pesan harus tentang login gagal");
-
-        test.log(Status.PASS, "Login gagal - pesan error: " + errorMessage);
+        test.log(Status.PASS, "Login gagal sesuai ekspektasi - Error: " + errorMessage);
     }
 
     @Test(priority = 3, description = "Test login dengan email kosong")
@@ -66,18 +70,17 @@ public class UserLoginTest extends BaseTest {
         test.log(Status.INFO, "Memulai test login dengan email kosong");
 
         LoginPage loginPage = new LoginPage(driver);
-
         loginPage.goToLoginPage();
-        test.log(Status.INFO, "Buka halaman login");
 
-        // Login hanya dengan password (email kosong)
-        loginPage.login("", "Test@123");
-        test.log(Status.INFO, "Login dengan email kosong");
+        // Login hanya dengan password
+        loginPage.login("", VALID_PASSWORD);
+        test.log(Status.INFO, "Input email kosong");
 
-        // Verifikasi validation error
+        // Verifikasi validation error pada field email
         String emailError = loginPage.getEmailError();
-        Assert.assertFalse(emailError.isEmpty(), "Error validasi email harus ditampilkan");
-        test.log(Status.PASS, "Validasi berhasil - error: " + emailError);
+        Assert.assertFalse(emailError.isEmpty(), "Error validasi email harus muncul");
+
+        test.log(Status.PASS, "Validasi email kosong berhasil - Error: " + emailError);
     }
 
     @Test(priority = 4, description = "Test login dengan password kosong")
@@ -85,116 +88,99 @@ public class UserLoginTest extends BaseTest {
         test.log(Status.INFO, "Memulai test login dengan password kosong");
 
         LoginPage loginPage = new LoginPage(driver);
-
         loginPage.goToLoginPage();
-        test.log(Status.INFO, "Buka halaman login");
 
-        // Login hanya dengan email (password kosong)
-        loginPage.login("test@example.com", "");
-        test.log(Status.INFO, "Login dengan password kosong");
+        // Login hanya dengan email
+        loginPage.login(VALID_EMAIL, "");
+        test.log(Status.INFO, "Input password kosong");
 
-        // Verifikasi login gagal (tetap di halaman login / error message)
-        Assert.assertFalse(loginPage.isLoginSuccess(), "Login harus gagal tanpa password");
-        test.log(Status.PASS, "Validasi berhasil - login gagal tanpa password");
+        // Verifikasi login gagal (tetap di halaman login)
+        Assert.assertFalse(loginPage.isLoginSuccess(), "Seharusnya tidak bisa login tanpa password");
+        test.log(Status.PASS, "Validasi password kosong berhasil");
     }
 
     @Test(priority = 5, description = "Test case sensitivity pada email")
     public void testLoginCaseSensitivity() {
-        test.log(Status.INFO, "Memulai test case sensitivity");
+        test.log(Status.INFO, "Memulai test case sensitivity (Email UPPERCASE)");
 
         LoginPage loginPage = new LoginPage(driver);
-
         loginPage.goToLoginPage();
-        test.log(Status.INFO, "Buka halaman login");
 
-        // Test dengan email uppercase (Email biasanya case-insensitive)
-        loginPage.login("TESTUSER@EXAMPLE.COM", "Test@123");
-        test.log(Status.INFO, "Login dengan email uppercase");
+        // Login dengan email HURUF BESAR (Domain email biasanya case-insensitive)
+        loginPage.login(VALID_EMAIL.toUpperCase(), VALID_PASSWORD);
+        test.log(Status.INFO, "Login dengan: " + VALID_EMAIL.toUpperCase());
 
-        // Cek hasil (tergantung sistem, bisa berhasil atau gagal)
-        // Di DemoWebShop biasanya berhasil karena email case-insensitive
+        // Verifikasi login berhasil
         boolean result = loginPage.isLoginSuccess();
-        test.log(Status.INFO, "Hasil login dengan uppercase: " + result);
+        Assert.assertTrue(result, "Login harusnya berhasil walau email uppercase");
 
-        // Jika berhasil, logout
-        if (result) {
-            loginPage.logout();
-            test.log(Status.INFO, "Logout setelah test");
-        }
+        test.log(Status.PASS, "Case sensitivity test berhasil");
 
-        test.log(Status.PASS, "Test case sensitivity selesai");
+        // Logout
+        if (result) loginPage.logout();
     }
 
     @Test(priority = 6, description = "Test remember me functionality")
     public void testRememberMeFunctionality() {
-        test.log(Status.INFO, "Memulai test remember me");
+        test.log(Status.INFO, "Memulai test Remember Me");
 
         LoginPage loginPage = new LoginPage(driver);
-
         loginPage.goToLoginPage();
-        test.log(Status.INFO, "Buka halaman login");
 
-        // Login dengan remember me
-        loginPage.loginWithRememberMe("testuser@example.com", "Test@123");
-        test.log(Status.INFO, "Login dengan remember me checked");
+        // Login dengan centang Remember Me
+        loginPage.loginWithRememberMe(VALID_EMAIL, VALID_PASSWORD);
+        test.log(Status.INFO, "Login dengan Remember Me dicentang");
 
-        // Verifikasi login berhasil
-        Assert.assertTrue(loginPage.isLoginSuccess(), "Login dengan remember me harus berhasil");
-        test.log(Status.PASS, "Login dengan remember me berhasil");
+        Assert.assertTrue(loginPage.isLoginSuccess(), "Login harus berhasil");
+        test.log(Status.PASS, "Login dengan Remember Me sukses");
 
-        // Logout
         loginPage.logout();
-        test.log(Status.INFO, "Logout untuk bersih-bersih");
     }
 
     @Test(priority = 7, description = "Test logout functionality")
     public void testLogoutFunctionality() {
-        test.log(Status.INFO, "Memulai test logout");
+        test.log(Status.INFO, "Memulai test Logout");
 
         LoginPage loginPage = new LoginPage(driver);
         HomePage homePage = new HomePage(driver);
 
         // Login dulu
         loginPage.goToLoginPage();
-        loginPage.login("testuser@example.com", "Test@123");
-        test.log(Status.INFO, "Login terlebih dahulu");
+        loginPage.login(VALID_EMAIL, VALID_PASSWORD);
 
-        // Verifikasi sudah login
-        Assert.assertTrue(loginPage.isLoginSuccess(), "Harus sudah login sebelum logout");
-        test.log(Status.INFO, "Verifikasi login berhasil");
+        // Pastikan login sukses dulu
+        Assert.assertTrue(loginPage.isLoginSuccess(), "Pre-condition: Login gagal");
 
-        // Logout
+        // Lakukan Logout
         loginPage.logout();
-        test.log(Status.INFO, "Melakukan logout");
+        test.log(Status.INFO, "Tombol logout diklik");
 
-        // Verifikasi logout berhasil
-        Assert.assertTrue(loginPage.isLogoutSuccess(), "Logout harus berhasil");
-        Assert.assertFalse(homePage.isUserLoggedIn(), "User harus terlihat logout");
-        test.log(Status.PASS, "Logout berhasil - user bisa logout");
+        // Verifikasi
+        Assert.assertTrue(loginPage.isLogoutSuccess(), "Tombol Login harus muncul kembali");
+        Assert.assertFalse(homePage.isUserLoggedIn(), "Link akun tidak boleh terlihat");
+
+        test.log(Status.PASS, "Logout berhasil");
     }
 
     @Test(priority = 8, description = "Test session persistence setelah login")
     public void testSessionPersistence() {
-        test.log(Status.INFO, "Memulai test session persistence");
+        test.log(Status.INFO, "Memulai test Session Persistence");
 
         LoginPage loginPage = new LoginPage(driver);
         HomePage homePage = new HomePage(driver);
 
         // Login
         loginPage.goToLoginPage();
-        loginPage.login("testuser@example.com", "Test@123");
-        test.log(Status.INFO, "Login terlebih dahulu");
+        loginPage.login(VALID_EMAIL, VALID_PASSWORD);
 
-        // Buka halaman home (navigasi)
+        // Pindah halaman (Navigasi ke Home)
         homePage.goToHomePage();
-        test.log(Status.INFO, "Buka halaman home");
+        test.log(Status.INFO, "Navigasi ke Homepage");
 
-        // Verifikasi masih login
-        Assert.assertTrue(homePage.isUserLoggedIn(), "User harus tetap login setelah navigasi");
-        test.log(Status.PASS, "Session persistence berhasil - user tetap login");
+        // Verifikasi user masih logged in
+        Assert.assertTrue(homePage.isUserLoggedIn(), "User harus tetap login setelah pindah halaman");
+        test.log(Status.PASS, "Session persistence aman");
 
-        // Logout
         loginPage.logout();
-        test.log(Status.INFO, "Logout untuk bersih-bersih");
     }
 }
